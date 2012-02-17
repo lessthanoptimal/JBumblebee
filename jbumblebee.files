@@ -1,0 +1,8 @@
+/home/pja/projects/jbumblebee/src/boofcv_drivers_stereo_CameraBumblebee2.c
+/home/pja/projects/jbumblebee/src/boofcv_drivers_stereo_CameraBumblebee2.h
+/home/pja/projects/jbumblebee/src/boofcv_drivers_stereo_CameraBumblebee2_Interpolation.h
+/home/pja/projects/jbumblebee/test/grab_stereo_example.c
+/home/pja/projects/jbumblebee/test/print_camera_info.c
+/home/pja/projects/jbumblebee/src/BumblebeeDriver.c
+/home/pja/projects/jbumblebee/src/BumblebeeDriver.h
+/home/pja/projects/jbumblebee/test/test_driver.c
