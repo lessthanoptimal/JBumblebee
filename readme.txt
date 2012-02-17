@@ -1,4 +1,5 @@
-Java code for grabbing stereo images from a Bumblebee 2 stereo camera by point gray.
+Java code for grabbing stereo images from a Bumblebee 2 stereo camera by PointGrey.  This code does not use the official 1394 linux drivers provided by PointGrey.  Historically they have been a bit flaky when it comes to linux and the drivery is very light weight without it.
+
 
 Requirements: Linux, libdc1394-2
 
@@ -10,4 +11,4 @@ Build Instructions:
 3) If no errors, then libjbumblebee.so and testdriver are now in the same directory
 4) Make sure the camera is plugged in an turned on
 5) Test source code by running ./testdriver
-6) 
+6) I'll add a nice ant script later on.  For now you're on your own!
