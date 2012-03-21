@@ -47,6 +47,12 @@ public class CameraBumblebee2 {
 
 		MultiSpectral<ImageUInt8> imageMS = getMultiSpectral();
 
+		ImageUInt8 r = imageMS.getBand(0);
+		ImageUInt8 b = imageMS.getBand(2);
+
+		imageMS.bands[0] = b;
+		imageMS.bands[2] = r;
+
 		ConvertBufferedImage.convertTo_U8(imageMS,image);
 
 		// Buffered images are so slow that this is faster....

@@ -94,9 +94,6 @@ int BCVBB_camera_init( int interpolation , int fps , int maxDelayMilli ) {
                                  640, 480);  // width, height
     DC1394_ERR_RTN(err,"Unable to set Format7 mode 0.\nEdit the example file manually to fit your camera capabilities");
 
-    err=dc1394_capture_setup(camera, 6, DC1394_CAPTURE_FLAGS_DEFAULT);
-    DC1394_ERR_CLN_RTN(err, dc1394_camera_free(camera), "Error capturing");
-
     // get camera information
     dc1394_get_image_size_from_video_mode(camera, mode, &width, &height);
 
@@ -115,16 +112,17 @@ int BCVBB_camera_init( int interpolation , int fps , int maxDelayMilli ) {
         if( num_packets <= 0 ) num_packets = 1;
         if( num_packets > 4095 ) num_packets = 4095;
 
-        printf("Setting FPS %d  num_packets = %d  min_bytes %d  max_bytes %d data_depth %d\n",fps,num_packets,min_bytes,max_bytes,data_depth);
+//        printf("Setting FPS %d  num_packets = %d  min_bytes %d  max_bytes %d data_depth %d\n",fps,num_packets,min_bytes,max_bytes,data_depth);
 
         uint32_t denominator = num_packets*8;
         uint32_t packet_size = (width*height*data_depth + denominator - 1)/denominator;
+
         // enforce that packet_size must be a multiple of min_bytes
         packet_size = (packet_size/min_bytes)*min_bytes;
         if( packet_size < min_bytes ) packet_size = min_bytes;
         if( packet_size > max_bytes ) packet_size = max_bytes;
 
-        printf("num_packets %d packet_size %d  max  %d\n",num_packets,packet_size,max_bytes);
+//        printf("num_packets %d packet_size %d  max  %d\n",num_packets,packet_size,max_bytes);
 
         err=dc1394_format7_set_packet_size(camera, mode, packet_size);
         handleErr("dc1394_format7_set_packet_size");
@@ -132,6 +130,10 @@ int BCVBB_camera_init( int interpolation , int fps , int maxDelayMilli ) {
 
     // declare stereo data.  will contain bayer image
     stereoData = (uint8_t *)malloc(width*height*2);
+
+    // must be called after dc1394_format7_set_packet_size
+    err=dc1394_capture_setup(camera, 6, DC1394_CAPTURE_FLAGS_DEFAULT);
+    DC1394_ERR_CLN_RTN(err, dc1394_camera_free(camera), "Error capturing");
 
     /*-----------------------------------------------------------------------
      *  have the camera start sending us data
@@ -173,7 +175,6 @@ int BCVBB_camera_grab( uint8_t* rgb ) {
             dc1394_capture_enqueue(camera, frame);
     }
     timestamp = frame->timestamp;
-
 
     // stereo crap
     err=dc1394_deinterlace_stereo(frame->image,stereoData,width,height*2);

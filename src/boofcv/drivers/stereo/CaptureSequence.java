@@ -2,10 +2,12 @@ package boofcv.drivers.stereo;
 
 import boofcv.gui.image.ImagePanel;
 import boofcv.gui.image.ShowImages;
-import boofcv.struct.image.ImageUInt8;
-import boofcv.struct.image.MultiSpectral;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.FileImageOutputStream;
 import java.awt.image.BufferedImage;
 import java.io.*;
 
@@ -13,10 +15,35 @@ import java.io.*;
  * @author Peter Abeles
  */
 public class CaptureSequence {
+	
+	public static boolean shutdownRequest = false;
+
+	private static void addShutdown() {
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				shutdownRequest = true;
+				try { Thread.sleep(200); } catch (InterruptedException e) { e.printStackTrace(); }
+			}
+		});
+	}
+
+	private static void savePPM(CameraBumblebee2 camera, int w, int h, int i) throws IOException {
+		File out = new File(String.format("images/left%07d.ppm",i));
+		BufferedOutputStream os = new BufferedOutputStream(new FileOutputStream(out));
+		String header = String.format("P6\n%d %d\n255\n", w, h/2);
+		os.write(header.getBytes());
+		os.write(camera.getRGB(), 0, w * h * 3 / 2);
+		os.close();
+		out = new File(String.format("images/right%07d.ppm",i));
+		os = new BufferedOutputStream(new FileOutputStream(out));
+		os.write(header.getBytes());
+		os.write(camera.getRGB(),w*h*3/2,w*h*3/2);
+		os.close();
+	}
 
 	public static void main( String args[] ) throws IOException {
-		int fps = 10;
-		int totalCapture = 10;
+		int fps = 20;
+		int totalCapture = 100;
 		boolean showImages = true;
 
 		if( args.length >= 1 ) {
@@ -28,6 +55,7 @@ public class CaptureSequence {
 			fps = Integer.parseInt(args[1]);
 			showImages = Integer.parseInt(args[2]) != 0;
 		}
+		System.out.println("fps = "+fps+" total "+totalCapture+" show images = "+showImages);
 
 		CameraBumblebee2 camera = new CameraBumblebee2();
 
@@ -47,42 +75,58 @@ public class CaptureSequence {
 		// storage for left and right images
 		int w = camera.getWidth();
 		int h = camera.getHeight();
-		BufferedImage left = new BufferedImage(w,h/2,BufferedImage.TYPE_INT_RGB);
-		BufferedImage right = new BufferedImage(w,h/2,BufferedImage.TYPE_INT_RGB);
+//		BufferedImage left = new BufferedImage(w,h/2,BufferedImage.TYPE_INT_RGB);
+//		BufferedImage right = new BufferedImage(w,h/2,BufferedImage.TYPE_INT_RGB);
+
+		OutputStreamWriter timeLog = new OutputStreamWriter(new FileOutputStream("images/time.txt")); 
+		timeLog.write("# (frame #) (time stamp ms)\n");
+
+//		ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+//		ImageWriteParam iwp = writer.getDefaultWriteParam();
+//		iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+//		iwp.setCompressionQuality(1);
+
+		addShutdown();
 
 		long before = System.currentTimeMillis();
-		
-		for( int i = 0; totalCapture == 0 || i < totalCapture; i++ ) {
+
+		int i = 0;
+		for( ; !shutdownRequest && (totalCapture == 0 || i < totalCapture); i++ ) {
 
 			if( !camera.grabframe() ) {
 				throw new RuntimeException("Grab frame failed");
 			}
 			System.out.println("Processing image "+i+"    ts "+camera.getTimeStamp()/1000+" "+System.currentTimeMillis());
 
-			BufferedImage image = camera.getBufferedImage();
 			if( gui != null ) {
+				BufferedImage image = camera.getBufferedImage();
 				gui.setBufferedImage(image);
 				gui.repaint();
 			}
 
-			left.createGraphics().drawImage(image,0,0,w,h/2,0,0,w,h/2,null);
-			right.createGraphics().drawImage(image,0,0,w,h/2,0,h/2,w,h,null);
+//			left.createGraphics().drawImage(image,0,0,w,h/2,0,0,w,h/2,null);
+//			right.createGraphics().drawImage(image,0,0,w,h/2,0,h/2,w,h,null);
 //
-			ImageIO.write(left,"jpg",new File(String.format("images/left%06d.jpg",i)));
-			ImageIO.write(right,"jpg",new File(String.format("images/right%06d.jpg",i)));
+//			FileImageOutputStream output;
+//			output = new FileImageOutputStream(new File((String.format("images/left%07d.jpg",i))));
+//			writer.setOutput(output);
+//			writer.write(null,new IIOImage(left, null, null),iwp);
+//			output.close();
 
-//			ImageIO.write(image,"jpg",new File(String.format("images/image%06d.jpg",i)));
+//			output = new FileImageOutputStream(new File((String.format("images/right%07d.jpg",i))));
+//			writer.setOutput(output);
+//			writer.write(null,new IIOImage(right, null, null),iwp);
+//			output.close();
 
-//			File out = new File(String.format("images/image%06d.ppm",i));
-//			BufferedOutputStream os = new BufferedOutputStream(new FileOutputStream(out));
-//			String header = String.format("P6\n%d %d\n255\n", w, h);
-//			os.write(header.getBytes());
-//			os.write(camera.getRGB());
-//			os.close();
+			timeLog.write(String.format("%07d %d\n",i,(camera.getTimeStamp()/1000)));
+			timeLog.flush();
+
+			savePPM(camera, w, h, i);
 		}
 
-		System.out.println("actual FPS = "+(totalCapture*1000.0/(System.currentTimeMillis()-before)));
+		System.out.println("actual FPS = "+(i*1000.0/(System.currentTimeMillis()-before)));
 		
+		timeLog.close();
 		camera.shutdown();
 
 		System.out.println("Done");
