@@ -13,7 +13,7 @@ public class SpeedTestApp {
 	public static void main( String args[] ) {
 		CameraBumblebee2 camera = new CameraBumblebee2();
 		
-		if( !camera.init(CameraBumblebee2.Interpolation.HQLINEAR,80,0) )
+		if( !camera.init(CameraBumblebee2.Interpolation.HQLINEAR,0,200) )
 			throw new RuntimeException("Init failed!");
 
 		int N = 100;

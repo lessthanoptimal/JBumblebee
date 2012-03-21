@@ -1,5 +1,6 @@
 package boofcv.drivers.stereo;
 
+import boofcv.core.image.ConvertBufferedImage;
 import boofcv.struct.image.ImageUInt8;
 import boofcv.struct.image.MultiSpectral;
 
@@ -44,13 +45,18 @@ public class CameraBumblebee2 {
 			image = new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);
 		}
 
-		int index = 0;
-		for( int y = 0; y < h; y++ ) {
-			for( int x = 0; x < w; x++ ) {
-				int c = ((rgb[index++]&0xff) << 16) | ((rgb[index++]&0xff) << 8) | ((rgb[index++]&0xff));
-				image.setRGB(x,y,c);
-			}
-		}
+		MultiSpectral<ImageUInt8> imageMS = getMultiSpectral();
+
+		ConvertBufferedImage.convertTo_U8(imageMS,image);
+
+		// Buffered images are so slow that this is faster....
+//		int index = 0;
+//		for( int y = 0; y < h; y++ ) {
+//			for( int x = 0; x < w; x++ ) {
+//				int c = ((rgb[index++]&0xff) << 16) | ((rgb[index++]&0xff) << 8) | ((rgb[index++]&0xff));
+//				image.setRGB(x,y,c);
+//			}
+//		}
 
 		return image;
 	}

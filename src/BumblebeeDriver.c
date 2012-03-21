@@ -102,6 +102,8 @@ int BCVBB_camera_init( int interpolation , int fps , int maxDelayMilli ) {
 
     // set the framerate by adjusting packet bytes
     // http://damien.douxchamps.net/ieee1394/libdc1394/v2.x/faq/#How_can_I_work_out_the_packet_size_for_a_wanted_frame_rate
+    // http://damien.douxchamps.net/ieee1394/libdc1394/v1.x/faq/#How_can_I_work_out_the_packet_size_for_a_wanted_frame_rate
+    // Version 1 appears to have more useful information than version 2
     if( fps > 0 ) {
         uint32_t min_bytes,max_bytes,data_depth;
         err=dc1394_format7_get_packet_parameters(camera, mode, &min_bytes, &max_bytes);
@@ -113,12 +115,12 @@ int BCVBB_camera_init( int interpolation , int fps , int maxDelayMilli ) {
         if( num_packets <= 0 ) num_packets = 1;
         if( num_packets > 4095 ) num_packets = 4095;
 
-        printf("Setting FPS %d  num_packets = %d  min_bytes %d  max_bytes %d\n",fps,num_packets,min_bytes,max_bytes);
+        printf("Setting FPS %d  num_packets = %d  min_bytes %d  max_bytes %d data_depth %d\n",fps,num_packets,min_bytes,max_bytes,data_depth);
 
         uint32_t denominator = num_packets*8;
         uint32_t packet_size = (width*height*data_depth + denominator - 1)/denominator;
         // enforce that packet_size must be a multiple of min_bytes
-        packet_size += (min_bytes-packet_size%min_bytes);
+        packet_size = (packet_size/min_bytes)*min_bytes;
         if( packet_size < min_bytes ) packet_size = min_bytes;
         if( packet_size > max_bytes ) packet_size = max_bytes;
 
