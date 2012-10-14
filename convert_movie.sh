@@ -1,5 +1,5 @@
 #/bin/sh
-#cd images
+cd images
 
 # compress using a lossless codec
 ffmpeg -i left%07d.ppm -vcodec ffv1 left.avi
