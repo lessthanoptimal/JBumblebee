@@ -12,3 +12,10 @@ Build Instructions:
 4) Make sure the camera is plugged in an turned on
 5) Test source code by running ./testdriver
 6) I'll add a nice ant script later on.  For now you're on your own!
+
+To collect a sequence of images:
+
+1) Follow instructions above
+2) type 'ant sequence'
+3) type ./sequence.sh
+4) To stop data collection hit control-c
