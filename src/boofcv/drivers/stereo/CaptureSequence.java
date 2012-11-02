@@ -3,11 +3,6 @@ package boofcv.drivers.stereo;
 import boofcv.gui.image.ImagePanel;
 import boofcv.gui.image.ShowImages;
 
-import javax.imageio.IIOImage;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.FileImageOutputStream;
 import java.awt.image.BufferedImage;
 import java.io.*;
 
@@ -18,26 +13,34 @@ public class CaptureSequence {
 	
 	public static boolean shutdownRequest = false;
 
+	public static SaveToDiskThread threadIO;
+
 	private static void addShutdown() {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				shutdownRequest = true;
+
+				if( threadIO != null ) {
+					threadIO.blockUntilEmpty();
+				}
+
 				try { Thread.sleep(200); } catch (InterruptedException e) { e.printStackTrace(); }
 			}
 		});
 	}
 
-	private static void savePPM(CameraBumblebee2 camera, int w, int h, int i) throws IOException {
+	public static void savePPM( byte[] rgb, int w, int h, int i) throws IOException {
 		File out = new File(String.format("images/left%07d.ppm",i));
-		BufferedOutputStream os = new BufferedOutputStream(new FileOutputStream(out));
+		DataOutputStream os = new DataOutputStream(new FileOutputStream(out));
+//		BufferedOutputStream os = new BufferedOutputStream(new FileOutputStream(out));
 		String header = String.format("P6\n%d %d\n255\n", w, h/2);
 		os.write(header.getBytes());
-		os.write(camera.getRGB(), 0, w * h * 3 / 2);
+		os.write(rgb, 0, w * h * 3 / 2);
 		os.close();
 		out = new File(String.format("images/right%07d.ppm",i));
-		os = new BufferedOutputStream(new FileOutputStream(out));
+		os = new DataOutputStream(new FileOutputStream(out));
 		os.write(header.getBytes());
-		os.write(camera.getRGB(),w*h*3/2,w*h*3/2);
+		os.write(rgb,w*h*3/2,w*h*3/2);
 		os.close();
 	}
 
@@ -59,7 +62,7 @@ public class CaptureSequence {
 
 		CameraBumblebee2 camera = new CameraBumblebee2();
 
-		if( !camera.init(CameraBumblebee2.Interpolation.HQLINEAR,fps,200) )
+		if( !camera.init(CameraBumblebee2.Interpolation.HQLINEAR,fps,5000) )
 			throw new RuntimeException("Init failed!");
 
 		System.out.println("Image Dimension = "+camera.getWidth()+"  "+camera.getHeight());
@@ -88,6 +91,9 @@ public class CaptureSequence {
 
 		addShutdown();
 
+		threadIO = new SaveToDiskThread(w,h,50,timeLog);
+		threadIO.start();
+
 		long before = System.currentTimeMillis();
 
 		int i = 0;
@@ -96,7 +102,7 @@ public class CaptureSequence {
 			if( !camera.grabframe() ) {
 				throw new RuntimeException("Grab frame failed");
 			}
-			System.out.println("Processing image "+i+"    ts "+camera.getTimeStamp()/1000+" "+System.currentTimeMillis());
+			System.out.printf("Processing image %6d  ts  %8d  %8d\n",i,camera.getTimeStamp()/1000,System.currentTimeMillis());
 
 			if( gui != null ) {
 				BufferedImage image = camera.getBufferedImage();
@@ -104,30 +110,17 @@ public class CaptureSequence {
 				gui.repaint();
 			}
 
-//			left.createGraphics().drawImage(image,0,0,w,h/2,0,0,w,h/2,null);
-//			right.createGraphics().drawImage(image,0,0,w,h/2,0,h/2,w,h,null);
-//
-//			FileImageOutputStream output;
-//			output = new FileImageOutputStream(new File((String.format("images/left%07d.jpg",i))));
-//			writer.setOutput(output);
-//			writer.write(null,new IIOImage(left, null, null),iwp);
-//			output.close();
+			threadIO.push(String.format("%07d %d\n",i,(camera.getTimeStamp()/1000)));
 
-//			output = new FileImageOutputStream(new File((String.format("images/right%07d.jpg",i))));
-//			writer.setOutput(output);
-//			writer.write(null,new IIOImage(right, null, null),iwp);
-//			output.close();
-
-			timeLog.write(String.format("%07d %d\n",i,(camera.getTimeStamp()/1000)));
-			timeLog.flush();
-
-			savePPM(camera, w, h, i);
+			threadIO.push(camera.getRGB());
+//			savePPM(camera.getRGB(), w, h, i);
 		}
 
 		System.out.println("actual FPS = "+(i*1000.0/(System.currentTimeMillis()-before)));
-		
-		timeLog.close();
+
 		camera.shutdown();
+		threadIO.blockUntilEmpty();
+		timeLog.close();
 
 		System.out.println("Done");
 		System.exit(0);

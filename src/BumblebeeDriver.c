@@ -132,7 +132,7 @@ int BCVBB_camera_init( int interpolation , int fps , int maxDelayMilli ) {
     stereoData = (uint8_t *)malloc(width*height*2);
 
     // must be called after dc1394_format7_set_packet_size
-    err=dc1394_capture_setup(camera, 6, DC1394_CAPTURE_FLAGS_DEFAULT);
+    err=dc1394_capture_setup(camera, 10, DC1394_CAPTURE_FLAGS_DEFAULT);
     DC1394_ERR_CLN_RTN(err, dc1394_camera_free(camera), "Error capturing");
 
     /*-----------------------------------------------------------------------
@@ -169,10 +169,12 @@ int BCVBB_camera_grab( uint8_t* rgb ) {
         }
         gettimeofday(&time,NULL);
         long ms = time.tv_sec*1000 + time.tv_usec/1000;
-        if( maxDelay <= 0 || (ms-(frame->timestamp/1000) <= maxDelay) )
+        if( maxDelay <= 0 || (ms-(frame->timestamp/1000) <= maxDelay) ) {
             break;
-        else
+        } else {
+            printf("Skipping lagged frame %ld\n",ms-(frame->timestamp/1000));
             dc1394_capture_enqueue(camera, frame);
+        }
     }
     timestamp = frame->timestamp;
 
